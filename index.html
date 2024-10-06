@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SL & TP Calculator</title>
+    <!-- Link til styles.css -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="main-container">
+        <!-- SL & TP Kalkulator Boks -->
+        <div class="box sl-tp-calculator">
+            <h2>SL & TP Calculator</h2>
+            <label for="entryPrice">Enter Entry Price:</label>
+            <input type="number" id="entryPrice" placeholder="Enter entry price" step="0.01">
+            <br>
+            <label for="tradeType">Select Trade Type:</label>
+            <select id="tradeType">
+                <option value="Long">Long</option>
+                <option value="Short">Short</option>
+            </select>
+            <br>
+            <button onclick="calculateSLTP()">Calculate SL & TP</button>
+            <div id="results">
+                <h3>TP Points:</h3>
+                <ul id="tpPoints"></ul>
+                <h3>SL Points:</h3>
+                <ul id="slPoints"></ul>
+            </div>
+        </div>
+
+        <!-- Profit & Loss Kalkulator Boks -->
+        <div class="box profit-calculator">
+            <h2>Profit & Loss Calculator</h2>
+            <label for="usdAmount">Enter Trade Size (USD):</label>
+            <input type="number" id="usdAmount" placeholder="Enter trade size in USD" step="0.01">
+            <br>
+            <label for="leverage">Enter Leverage:</label>
+            <input type="number" id="leverage" placeholder="Enter leverage" value="1">
+            <br>
+            <button onclick="calculateProfitLoss()">Calculate P&L</button>
+            <div id="profitLossResults">
+                <h3>Profit & Loss Overview:</h3>
+                <h4>Take-Profit Points</h4>
+                <ul id="profitTPPoints"></ul>
+                <h4>Stop-Loss Points</h4>
+                <ul id="profitSLPoints"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SL & TP Kalkulator Logik
+        function calculateSLTP() {
+            const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+            const tradeType = document.getElementById('tradeType').value;
+            if (isNaN(entryPrice) || entryPrice <= 0) {
+                alert("Please enter a valid entry price.");
+                return;
+            }
+
+            const sl1 = tradeType === 'Long' ? entryPrice * 0.9985 : entryPrice * 1.0015; // -0.15% SL
+            const sl2 = tradeType === 'Long' ? entryPrice * 0.997 : entryPrice * 1.003;   // -0.3% SL
+
+            let tpPoints = [];
+            const tpValues = [0.003, 0.006, 0.009, 0.012, 0.015];
+            for (let i = 0; i < tpValues.length; i++) {
+                tpPoints.push(tradeType === 'Long' ? entryPrice * (1 + tpValues[i]) : entryPrice * (1 - tpValues[i]));
+            }
+
+            document.getElementById('slPoints').innerHTML = `<li class="loss-point">SL 1 (-0.15%): ${sl1.toFixed(2)}</li>
+                                                             <li class="loss-point">SL 2 (-0.3%): ${sl2.toFixed(2)}</li>`;
+            
+            document.getElementById('tpPoints').innerHTML = tpPoints.map((tp, index) => `<li>TP ${index + 1} (+${(tpValues[index] * 100).toFixed(1)}%): ${tp.toFixed(2)}</li>`).join('');
+        }
+
+        // Profit & Loss Kalkulator Logik
+        function calculateProfitLoss() {
+            const usdAmount = parseFloat(document.getElementById('usdAmount').value);
+            const leverage = parseFloat(document.getElementById('leverage').value);
+            const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+
+            if (isNaN(usdAmount) || usdAmount <= 0 || isNaN(leverage) || leverage <= 0 || isNaN(entryPrice) || entryPrice <= 0) {
+                alert("Please enter valid values for trade size, leverage, and entry price.");
+                return;
+            }
+
+            // TP & SL punkter
+            const sl1Price = parseFloat(document.getElementById('slPoints').querySelector('li:nth-child(1)').textContent.split(': ')[1]);
+            const sl2Price = parseFloat(document.getElementById('slPoints').querySelector('li:nth-child(2)').textContent.split(': ')[1]);
+            const tpPrices = Array.from(document.getElementById('tpPoints').querySelectorAll('li')).map(tp => parseFloat(tp.textContent.split(': ')[1]));
+
+            // Beregn P&L for SL punkter
+            const sl1Loss = ((entryPrice - sl1Price) / entryPrice) * usdAmount * leverage;
+            const sl2Loss = ((entryPrice - sl2Price) / entryPrice) * usdAmount * leverage;
+
+            // Beregn P&L for TP punkter i korrekt rækkefølge
+            const tpProfits = tpPrices.map((tpPrice) => ((tpPrice - entryPrice) / entryPrice) * usdAmount * leverage);
+
+            // Opdater P&L resultater
+            document.getElementById('profitSLPoints').innerHTML = `<li class="loss-point">SL 1 Loss: -$${Math.abs(sl1Loss.toFixed(2))}</li>
+                                                                   <li class="loss-point">SL 2 Loss: -$${Math.abs(sl2Loss.toFixed(2))}</li>`;
+
+            document.getElementById('profitTPPoints').innerHTML = tpProfits.map((profit, index) => `<li>TP ${index + 1} Profit: +$${profit.toFixed(2)}</li>`).join('');
+        }
+    </script>
+</body>
+</html>
